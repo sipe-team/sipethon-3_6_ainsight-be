@@ -13,3 +13,7 @@ DATABASES = {
         "PORT": "5432",
     }
 }
+
+ALLOWED_HOSTS = ['ainsight-be.fly.dev']
+
+CSRF_TRUSTED_ORIGINS = ["https://*.fly.dev/"]
