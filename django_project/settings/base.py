@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -129,3 +132,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "auth.User"
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+SENTRY_DSN = 'https://f10d9c8aafd63ac6c90f1d16b6cfcd88@o4508036505862144.ingest.us.sentry.io/4508653994639360'
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=[DjangoIntegration()],
+    traces_sample_rate=0.0,
+    send_default_pii=True,
+)
