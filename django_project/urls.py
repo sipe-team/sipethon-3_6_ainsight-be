@@ -18,12 +18,17 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 from django_project.app import app
 
 app.add_router("v1", "apps.core.views.router")
+app.add_router("v1", "apps.chat.endpoints.router")  # chat 앱의 router 추가
 
-urlpatterns = [path("admin/", admin.site.urls), path("api/", app.urls)] + static(
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("api/", app.urls),
+    path("", include('apps.chat.urls')),  # chat 앱의 템플릿 뷰 URL 추가
+] + static(
     settings.STATIC_URL, document_root=settings.STATIC_ROOT
 )

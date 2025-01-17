@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",
-    
+    'apps.chat',  # chat 앱 등록
 ]
 
 MIDDLEWARE = [
