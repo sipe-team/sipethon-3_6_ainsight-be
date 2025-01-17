@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat Stream Test</title>
+    <style>
+      #response {
+        white-space: pre-wrap;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-top: 10px;
+        min-height: 100px;
+      }
+      #message {
+        width: 80%;
+        padding: 5px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Chat Stream Test</h2>
+      <div>
+        <input type="text" id="message" placeholder="메시지를 입력하세요" />
+        <button onclick="sendMessage()">전송</button>
+      </div>
+      <div id="response"></div>
+    </div>
+
+    <script>
+      function sendMessage() {
+        const messageInput = document.getElementById('message');
+        const responseDiv = document.getElementById('response');
+        const message = messageInput.value;
+
+        responseDiv.textContent = '';
+
+        fetch('/api/v1/chat/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: message,
+          }),
+        })
+          .then((response) => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            function readStream() {
+              reader.read().then(({ done, value }) => {
+                if (done) {
+                  return;
+                }
+
+                const text = decoder.decode(value);
+                const lines = text.split('\n');
+
+                lines.forEach((line) => {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      responseDiv.textContent += data.content;
+                    } catch (e) {
+                      console.error('Error parsing JSON:', e);
+                    }
+                  }
+                });
+
+                readStream();
+              });
+            }
+
+            readStream();
+          })
+          .catch((error) => {
+            console.error('Error:', error);
+            responseDiv.textContent = '에러가 발생했습니다: ' + error;
+          });
+
+        messageInput.value = '';
+      }
+    </script>
+  </body>
+</html>
