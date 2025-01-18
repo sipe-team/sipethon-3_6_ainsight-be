@@ -9,11 +9,12 @@ RUN mkdir -p /code
 
 WORKDIR /code
 
+COPY . /code
 RUN pip install poetry
 COPY pyproject.toml poetry.lock /code/
 RUN poetry config virtualenvs.create false
-RUN poetry install --only main --no-root --no-interaction
-COPY . /code
+RUN #poetry install --only main --no-root --no-interaction
+RUN pip install -r /code/requirements.txt
 
 EXPOSE 8000
 
