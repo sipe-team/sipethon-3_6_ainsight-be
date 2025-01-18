@@ -2,6 +2,7 @@ from ninja import Schema
 
 
 class ModelAnswerSchema(Schema):
+    id: int
     model_id: str
     answer: str
 
