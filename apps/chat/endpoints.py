@@ -19,7 +19,7 @@ genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 # API 엔드포인트와 스키마 정의
 class MessageSchema(Schema):
     message: str
-    models: list[str] = ['gpt-4o']
+    models: list[str] = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo']
 
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):

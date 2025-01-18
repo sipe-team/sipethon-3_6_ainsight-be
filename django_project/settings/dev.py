@@ -16,6 +16,6 @@ DATABASES = {
     }
 }
 
-ALLOWED_HOSTS = ['ainsight-be.fly.dev']
+ALLOWED_HOSTS = ['ainsight-be.fly.dev', 'sipethon-3-6-ainsight-fe.vercel.app/']
 
-CSRF_TRUSTED_ORIGINS = ["https://*.fly.dev/"]
+CSRF_TRUSTED_ORIGINS = ["https://*.fly.dev/", 'https://*.vercel.app/']
