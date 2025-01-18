@@ -24,6 +24,7 @@ from django_project.app import app
 
 app.add_router("v1", "apps.core.views.router")
 app.add_router("v1", "apps.chat.endpoints.router")  # chat 앱의 router 추가
+app.add_router("v1", "apps.answer.views.router")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

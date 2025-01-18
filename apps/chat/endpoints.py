@@ -21,6 +21,7 @@ class MessageSchema(Schema):
     message: str
     models: list[str] = ['gpt-4o']
 
+
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
     def event_stream():
