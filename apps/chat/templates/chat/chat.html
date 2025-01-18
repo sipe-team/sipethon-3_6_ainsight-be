@@ -3,41 +3,71 @@
   <head>
     <title>Chat Stream Test</title>
     <style>
-      #response {
-        white-space: pre-wrap;
-        border: 1px solid #ccc;
-        padding: 10px;
-        margin-top: 10px;
-        min-height: 100px;
+      .container {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+      }
+      .input-container {
+        margin-bottom: 20px;
       }
       #message {
         width: 80%;
-        padding: 5px;
+        padding: 10px;
+        margin-right: 10px;
       }
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 20px;
+      .responses-container {
+        display: flex;
+        gap: 20px;
+      }
+      .model-response {
+        flex: 1;
+        border: 1px solid #ccc;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .model-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .response-content {
+        white-space: pre-wrap;
+        min-height: 200px;
       }
     </style>
   </head>
   <body>
     <div class="container">
       <h2>Chat Stream Test</h2>
-      <div>
+      <div class="input-container">
         <input type="text" id="message" placeholder="메시지를 입력하세요" />
         <button onclick="sendMessage()">전송</button>
       </div>
-      <div id="response"></div>
+      <div class="responses-container">
+        <div class="model-response">
+          <div class="model-title">GPT-4o</div>
+          <div id="gpt-4o-response" class="response-content"></div>
+        </div>
+        <div class="model-response">
+          <div class="model-title">GPT-4o mini</div>
+          <div id="gpt-4o-mini-response" class="response-content"></div>
+        </div>
+        <div class="model-response">
+          <div class="model-title">GPT-3.5 Terbo</div>
+          <div id="gpt-3.5-turbo-response" class="response-content"></div>
+        </div>
+      </div>
     </div>
 
     <script>
       function sendMessage() {
         const messageInput = document.getElementById('message');
-        const responseDiv = document.getElementById('response');
         const message = messageInput.value;
 
-        responseDiv.textContent = '';
+        // 응답 영역 초기화
+        document.getElementById('gpt-4o-response').textContent = '';
+        document.getElementById('gpt-4o-mini-response').textContent = '';
+        document.getElementById('gpt-3.5-turbo-response').textContent = '';
 
         fetch('/api/v1/chat/stream', {
           method: 'POST',
@@ -46,6 +76,7 @@
           },
           body: JSON.stringify({
             message: message,
+            models: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
           }),
         })
           .then((response) => {
@@ -54,9 +85,7 @@
 
             function readStream() {
               reader.read().then(({ done, value }) => {
-                if (done) {
-                  return;
-                }
+                if (done) return;
 
                 const text = decoder.decode(value);
                 const lines = text.split('\n');
@@ -65,7 +94,21 @@
                   if (line.startsWith('data: ')) {
                     try {
                       const data = JSON.parse(line.slice(6));
-                      responseDiv.textContent += data.content;
+                      if (data.type === 'content') {
+                        const responseDiv = document.getElementById(
+                          `${data.model}-response`
+                        );
+                        if (responseDiv) {
+                          responseDiv.textContent += data.content;
+                        }
+                      } else if (data.type === 'error') {
+                        const responseDiv = document.getElementById(
+                          `${data.model}-response`
+                        );
+                        if (responseDiv) {
+                          responseDiv.textContent = `Error: ${data.error}`;
+                        }
+                      }
                     } catch (e) {
                       console.error('Error parsing JSON:', e);
                     }
@@ -80,7 +123,6 @@
           })
           .catch((error) => {
             console.error('Error:', error);
-            responseDiv.textContent = '에러가 발생했습니다: ' + error;
           });
 
         messageInput.value = '';
