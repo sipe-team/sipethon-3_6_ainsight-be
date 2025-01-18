@@ -88,9 +88,9 @@ def chat_stream(request, message_data: MessageSchema):
                         if hasattr(chunk, 'text'):
                             content = chunk.text
 
-                    text[model] += content
 
                     if content:
+                        text[model] += content
                         data = {
                             "type": "content",
                             "model": model,
