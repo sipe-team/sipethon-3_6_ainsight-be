@@ -11,4 +11,3 @@ class UserAnswerSchema(Schema):
     id: int
     question: str
     model_answers: list[ModelAnswerSchema]
-

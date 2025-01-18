@@ -104,8 +104,9 @@ def chat_stream(request, message_data: MessageSchema):
                     active_responses[model] = False
                     yield f"data: {json.dumps({'type': 'error', 'model': model, 'error': str(e)}, ensure_ascii=False)}\n\n"
 
-        answer = UserAnswer(question=message_data.message)
-        answer.save()
+        if text.keys():
+            answer = UserAnswer(question=message_data.message)
+            answer.save()
         model_answers = []
         for model_id in text.keys():
             model_answers.append(ModelAnswer(model_id=model_id, answer=text[model_id], user_answer=answer))
