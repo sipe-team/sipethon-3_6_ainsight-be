@@ -21,7 +21,6 @@ class MessageSchema(Schema):
     message: str
     models: list[str] = ['gpt-4o']
 
-
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
     def event_stream():
@@ -29,7 +28,7 @@ def chat_stream(request, message_data: MessageSchema):
         
         # 모델별 응답 생성
         for model in message_data.models:
-            # GPT 모델 처리
+	        # GPT 모델 처리
             if model.startswith('gpt'):
                 responses[model] = openai_client.chat.completions.create(
                     model=model,
@@ -72,7 +71,7 @@ def chat_stream(request, message_data: MessageSchema):
                     chunk = next(responses[model])
                     content = None
                     
-                    # # 각 모델별로 다른 응답 형식 처리
+                    # 각 모델별로 다른 응답 형식 처리
                     if model.startswith('gpt'):
                         content = chunk.choices[0].delta.content
                     elif model.startswith('claude'):

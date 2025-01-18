@@ -110,20 +110,7 @@
         <input type="text" id="message" placeholder="메시지를 입력하세요" />
         <button onclick="sendMessage()">전송</button>
       </div>
-      <div class="responses-container">
-        <div class="model-response">
-          <div class="model-title">GPT-4o</div>
-          <div id="gpt-4o-response" class="response-content"></div>
-        </div>
-        <div class="model-response">
-          <div class="model-title">GPT-4o mini</div>
-          <div id="gpt-4o-mini-response" class="response-content"></div>
-        </div>
-        <div class="model-response">
-          <div class="model-title">GPT-3.5 Turbo</div>
-          <div id="gpt-3.5-turbo-response" class="response-content"></div>
-        </div>
-      </div>
+      <div class="responses-container" id="responses-container"></div>
     </div>
 
     <script>
