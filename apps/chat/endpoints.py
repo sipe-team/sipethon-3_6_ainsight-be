@@ -8,6 +8,8 @@ import os
 from dotenv import load_dotenv
 from itertools import zip_longest
 
+from apps.answer.models import UserAnswer, ModelAnswer
+
 router = Router(tags=["Chat"])
 load_dotenv()
 
@@ -60,7 +62,8 @@ def chat_stream(request, message_data: MessageSchema):
             yield f"data: {json.dumps({'type': 'start', 'model': model}, ensure_ascii=False)}\n\n"
 
         active_responses = {model: True for model in message_data.models}
-        
+
+        text = {model: '' for model in message_data.models}
         # 스트리밍 응답 처리
         while any(active_responses.values()):
             for model in message_data.models:
@@ -84,7 +87,9 @@ def chat_stream(request, message_data: MessageSchema):
                         # Gemini 응답 처리
                         if hasattr(chunk, 'text'):
                             content = chunk.text
-                        
+
+                    text[model] += content
+
                     if content:
                         data = {
                             "type": "content",
@@ -98,7 +103,14 @@ def chat_stream(request, message_data: MessageSchema):
                 except Exception as e:
                     active_responses[model] = False
                     yield f"data: {json.dumps({'type': 'error', 'model': model, 'error': str(e)}, ensure_ascii=False)}\n\n"
-    
+
+        answer = UserAnswer(question=message_data.message)
+        answer.save()
+        model_answers = []
+        for model_id in text.keys():
+            model_answers.append(ModelAnswer(model_id=model_id, answer=text[model_id], user_answer=answer))
+        ModelAnswer.objects.bulk_create(model_answers)
+
     return StreamingHttpResponse(
         event_stream(),
         content_type='text/event-stream; charset=utf-8'
