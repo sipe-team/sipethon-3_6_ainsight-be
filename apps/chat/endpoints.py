@@ -11,9 +11,11 @@ router = Router(tags=["Chat"])
 load_dotenv()
 client = OpenAI(api_key=os.getenv('GPT_OPENAI_API_KEY'))
 
+
 class MessageSchema(Schema):
     message: str
     models: list[str] = ['gpt-4o']
+
 
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
