@@ -2,6 +2,8 @@ from .base import *
 
 ENVIRONMENT = "dev"
 
+DEBUG = True
+
 
 DATABASES = {
     "default": {
