@@ -127,6 +127,7 @@ def chat_stream(request, message_data: MessageSchema):
                     if content:
                         # 마크다운 제거 적용
                         content = remove_markdown(content)
+                        text[model] = content
                         data = {
                             "type": "content",
                             "model": model,
