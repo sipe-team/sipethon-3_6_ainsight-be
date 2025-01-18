@@ -3,7 +3,7 @@ from contrib.django import models
 
 
 class UserAnswer(models.BaseDateTimeModel):
-    question = models.CharField(max_length=150)
+    question = models.CharField(max_length=200)
 
     class Meta:
         db_table = 'user_answer'
