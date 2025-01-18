@@ -1,7 +1,8 @@
-# endpoints.py
 from ninja import Router, Schema
 from django.http import StreamingHttpResponse
 from openai import OpenAI
+import anthropic
+import google.generativeai as genai
 import json
 import os
 from dotenv import load_dotenv
@@ -9,8 +10,13 @@ from itertools import zip_longest
 
 router = Router(tags=["Chat"])
 load_dotenv()
-client = OpenAI(api_key=os.getenv('GPT_OPENAI_API_KEY'))
 
+# AI 서비스의 클라이언트 초기화
+openai_client = OpenAI(api_key=os.getenv('GPT_OPENAI_API_KEY'))
+claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+
+# API 엔드포인트와 스키마 정의
 class MessageSchema(Schema):
     message: str
     models: list[str] = ['gpt-4o']
@@ -18,22 +24,44 @@ class MessageSchema(Schema):
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
     def event_stream():
-        # 모든 모델의 응답을 동시에 시작
-        responses = {
-            model: client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": message_data.message}],
-                stream=True
-            ) for model in message_data.models
-        }
+        responses = {}
         
-        # 각 모델의 시작을 알림
+        # 모델별 응답 생성
+        for model in message_data.models:
+            # GPT 모델 처리
+            if model.startswith('gpt'):
+                responses[model] = openai_client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": message_data.message}],
+                    stream=True
+                )
+            # Claude 모델 처리
+            elif model.startswith('claude'):
+                responses[model] = claude_client.messages.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": message_data.message
+                        }
+                    ],
+                    stream=True,
+                    max_tokens=1024,
+                )
+            # Gemini 모델 처리
+            elif model.startswith('gemini'):
+                response = genai.GenerativeModel(model_name=model).generate_content(
+                message_data.message,
+                stream=True
+                )
+                responses[model] = iter(response)  # iter() 함수를 사용하여 이터레이터로 변환
+        
         for model in message_data.models:
             yield f"data: {json.dumps({'type': 'start', 'model': model}, ensure_ascii=False)}\n\n"
 
-        # 모든 응답의 청크를 번갈아가며 처리
         active_responses = {model: True for model in message_data.models}
         
+        # 스트리밍 응답 처리
         while any(active_responses.values()):
             for model in message_data.models:
                 if not active_responses[model]:
@@ -41,11 +69,27 @@ def chat_stream(request, message_data: MessageSchema):
                     
                 try:
                     chunk = next(responses[model])
-                    if chunk.choices[0].delta.content:
+                    content = None
+                    
+                    # # 각 모델별로 다른 응답 형식 처리
+                    if model.startswith('gpt'):
+                        content = chunk.choices[0].delta.content
+                    elif model.startswith('claude'):
+                        # Claude 응답 처리
+                        if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'text'):
+                            content = chunk.delta.text  # 'text'가 있다면 이 값을 사용
+                        elif hasattr(chunk, 'completion'):
+                            content = chunk.completion  # 'completion'을 사용
+                    elif model.startswith('gemini'):
+                        # Gemini 응답 처리
+                        if hasattr(chunk, 'text'):
+                            content = chunk.text
+                        
+                    if content:
                         data = {
                             "type": "content",
                             "model": model,
-                            "content": chunk.choices[0].delta.content
+                            "content": content
                         }
                         yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
                 except StopIteration:
