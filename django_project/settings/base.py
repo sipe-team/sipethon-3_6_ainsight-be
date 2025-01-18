@@ -133,6 +133,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "auth.User"
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 SENTRY_DSN = 'https://f10d9c8aafd63ac6c90f1d16b6cfcd88@o4508036505862144.ingest.us.sentry.io/4508653994639360'
 
