@@ -18,16 +18,17 @@ openai_client = OpenAI(api_key=os.getenv('GPT_OPENAI_API_KEY'))
 claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
+
 # API 엔드포인트와 스키마 정의
 class MessageSchema(Schema):
     message: str
     models: list[str] = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo']
 
+
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
     def event_stream():
         responses = {}
-        
         # 모델별 응답 생성
         for model in message_data.models:
 	        # GPT 모델 처리
@@ -107,10 +108,10 @@ def chat_stream(request, message_data: MessageSchema):
         if text.keys():
             answer = UserAnswer(question=message_data.message)
             answer.save()
-        model_answers = []
-        for model_id in text.keys():
-            model_answers.append(ModelAnswer(model_id=model_id, answer=text[model_id], user_answer=answer))
-        ModelAnswer.objects.bulk_create(model_answers)
+            model_answers = []
+            for model_id in text.keys():
+                model_answers.append(ModelAnswer(model_id=model_id, answer=text[model_id], user_answer=answer))
+            ModelAnswer.objects.bulk_create(model_answers)
 
     return StreamingHttpResponse(
         event_stream(),
