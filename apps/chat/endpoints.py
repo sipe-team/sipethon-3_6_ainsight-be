@@ -5,6 +5,7 @@ import anthropic
 import google.generativeai as genai
 import json
 import os
+import re
 from dotenv import load_dotenv
 from itertools import zip_longest
 
@@ -18,10 +19,40 @@ openai_client = OpenAI(api_key=os.getenv('GPT_OPENAI_API_KEY'))
 claude_client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
+# 공통 컨텍스트 정의
+CODE_CONTEXT = """
+You are a text-only assistant. You must follow these rules:
+1. Never use code blocks or backticks
+2. Never use markdown formatting
+3. Show code as plain text with proper indentation using spaces
+"""
+
+def remove_markdown(content):
+    """마크다운 및 코드 블록 제거"""
+    if content:
+        # 코드 블록 제거 (3개의 백틱으로 감싸진 부분)
+        content = re.sub(r'```[\s\S]*?```', '', content)
+        # 인라인 코드 제거 (1개의 백틱으로 감싸진 부분)
+        content = re.sub(r'`[^`]*`', '', content)
+        # 헤더 제거 (Markdown 헤더, #으로 시작하는 부분)
+        content = re.sub(r'#{1,6}\s', '', content)
+        # 리스트 항목 제거 (목록의 아이템들, * - + 등으로 시작하는 부분)
+        content = re.sub(r'^[\*\+-]\s', '', content, flags=re.MULTILINE)
+        # 링크 제거 (Markdown 링크 형식)
+        content = re.sub(r'\[([^\]]*)\]\([^\)]*\)', r'\1', content)
+        # HTML 태그 제거
+        content = re.sub(r'<.*?>', '', content)
+        # \`로 감싸진 코드 블록 제거 (escape된 백틱 처리)
+        content = re.sub(r'\\`[^`]*\\`', '', content)  # \`로 감싸진 코드 블록 제거
+        # 마크다운 형식의 백틱 부분 제거 (기타 백틱 포함 부분 처리)
+        content = re.sub(r'`+', '', content)  # 하나 이상의 연속된 백틱 제거
+    return content
+
+
 # API 엔드포인트와 스키마 정의
 class MessageSchema(Schema):
     message: str
-    models: list[str] = ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo']
+    models: list[str] = ['gpt-4o']
 
 @router.post("/chat/stream")
 def chat_stream(request, message_data: MessageSchema):
@@ -30,11 +61,14 @@ def chat_stream(request, message_data: MessageSchema):
         
         # 모델별 응답 생성
         for model in message_data.models:
-	        # GPT 모델 처리
+            # GPT 모델 처리
             if model.startswith('gpt'):
                 responses[model] = openai_client.chat.completions.create(
                     model=model,
-                    messages=[{"role": "user", "content": message_data.message}],
+                    messages=[
+                        {"role": "system", "content": CODE_CONTEXT},
+                        {"role": "user", "content": message_data.message}
+                    ],
                     stream=True
                 )
             # Claude 모델 처리
@@ -44,7 +78,7 @@ def chat_stream(request, message_data: MessageSchema):
                     messages=[
                         {
                             "role": "user",
-                            "content": message_data.message
+                            "content": CODE_CONTEXT + "\n\n" + message_data.message
                         }
                     ],
                     stream=True,
@@ -52,18 +86,20 @@ def chat_stream(request, message_data: MessageSchema):
                 )
             # Gemini 모델 처리
             elif model.startswith('gemini'):
-                response = genai.GenerativeModel(model_name=model).generate_content(
-                message_data.message,
-                stream=True
+                gen_model = genai.GenerativeModel(model_name=model)
+                response = gen_model.generate_content(
+                    contents=CODE_CONTEXT + "\n\n" + message_data.message,
+                    generation_config={"temperature": 0.7},
+                    stream=True
                 )
-                responses[model] = iter(response)  # iter() 함수를 사용하여 이터레이터로 변환
+                responses[model] = iter(response)
         
         for model in message_data.models:
             yield f"data: {json.dumps({'type': 'start', 'model': model}, ensure_ascii=False)}\n\n"
 
         active_responses = {model: True for model in message_data.models}
-
         text = {model: '' for model in message_data.models}
+
         # 스트리밍 응답 처리
         while any(active_responses.values()):
             for model in message_data.models:
@@ -87,10 +123,10 @@ def chat_stream(request, message_data: MessageSchema):
                         # Gemini 응답 처리
                         if hasattr(chunk, 'text'):
                             content = chunk.text
-
-
+                        
                     if content:
-                        text[model] += content
+                        # 마크다운 제거 적용
+                        content = remove_markdown(content)
                         data = {
                             "type": "content",
                             "model": model,
